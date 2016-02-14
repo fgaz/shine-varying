@@ -1,5 +1,6 @@
 module Graphics.Shine.FRP.Varying (
   ShineInput(..),
+  playVarying,
   playVaryingIO,
   timeNumeric,
   timeEvent,
@@ -14,22 +15,27 @@ import Graphics.Shine
 import Control.Varying.Core
 import Control.Varying.Event
 import Web.KeyCode
+import Data.Functor.Identity
 
 
 data ShineInput = Input Input | Time Float
 
 
+playVarying :: Float -> (Int, Int) -> Var ShineInput Picture -> IO ()
+playVarying fps dims v =
+    play fps dims (Empty, v) fst (\a b -> runIdentity $ handleInput a b) (\a b -> runIdentity $ step a b)
+
 playVaryingIO :: Float -> (Int, Int) -> VarT IO ShineInput Picture -> IO ()
 playVaryingIO fps dims v =
-    playIO fps dims (Empty, v) (\_ x-> return $ fst x) handleInput step
+    playIO fps dims (Empty, v) (const $ return . fst) (const handleInput) (const step)
 
-handleInput :: Monad m => a -> Input -> (Picture, VarT m ShineInput Picture) -> m (Picture, VarT m ShineInput Picture)
-handleInput _ i (_,v) = do
+handleInput :: Monad m => Input -> (Picture, VarT m ShineInput Picture) -> m (Picture, VarT m ShineInput Picture)
+handleInput i (_,v) = do
   v' <- execVar v $ Input i
   return (Empty, v')
 
-step :: a -> Float -> (Picture, VarT IO ShineInput Picture) -> IO (Picture, VarT IO ShineInput Picture)
-step _ t (_,v) = runVarT v $ Time t
+step :: Monad m => Float -> (Picture, VarT m ShineInput Picture) -> m (Picture, VarT m ShineInput Picture)
+step t (_,v) = runVarT v $ Time t
 
 -- ## Useful Vars
 
