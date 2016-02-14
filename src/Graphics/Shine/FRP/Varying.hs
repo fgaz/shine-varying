@@ -19,36 +19,36 @@ import Web.KeyCode
 data ShineInput = Input Input | Time Float
 
 
-playVaryingIO :: Float -> (Int, Int) -> Var IO ShineInput Picture -> IO ()
+playVaryingIO :: Float -> (Int, Int) -> VarT IO ShineInput Picture -> IO ()
 playVaryingIO fps dims v =
     playIO fps dims (Empty, v) (\_ x-> return $ fst x) handleInput step
 
-handleInput :: a -> Input -> (Picture, Var IO ShineInput Picture) -> IO (Picture, Var IO ShineInput Picture)
+handleInput :: Monad m => a -> Input -> (Picture, VarT m ShineInput Picture) -> m (Picture, VarT m ShineInput Picture)
 handleInput _ i (_,v) = do
   v' <- execVar v $ Input i
   return (Empty, v')
 
-step :: a -> Float -> (Picture, Var IO ShineInput Picture) -> IO (Picture, Var IO ShineInput Picture)
-step _ t (_,v) = runVar v $ Time t
+step :: a -> Float -> (Picture, VarT IO ShineInput Picture) -> IO (Picture, VarT IO ShineInput Picture)
+step _ t (_,v) = runVarT v $ Time t
 
 -- ## Useful Vars
 
 --MAYBE wrap in Event
 
-timeNumeric :: Var IO ShineInput Float
+timeNumeric :: Monad m => VarT m ShineInput Float
 timeNumeric = var f
   where
     f (Input _) = 0
     f (Time t) = t
 
-timeEvent :: Var IO ShineInput (Event Float)
+timeEvent :: Monad m => VarT m ShineInput (Event Float)
 timeEvent = var f
   where
     f (Input _) = NoEvent
     f (Time t) = Event t
 
 
-isDownButton :: MouseBtn -> Var IO ShineInput Bool
+isDownButton :: Monad m => MouseBtn -> VarT m ShineInput Bool
 isDownButton b = accumulate f False
   where
     f _ (Input (MouseBtn b' Down _)) | b == b' = True
@@ -57,14 +57,14 @@ isDownButton b = accumulate f False
 
 --mouseButtonsDown :: Var IO ShineInput [MouseButton]
 
-mouseMove :: Var IO ShineInput (Int,Int)
+mouseMove :: Monad m => VarT m ShineInput (Int,Int)
 mouseMove = accumulate f (0,0)
   where
     f _ (Input (MouseMove coords)) = coords
     f s _ = s
 
 
-isDownKey :: Key -> Var IO ShineInput Bool
+isDownKey :: Monad m => Key -> VarT m ShineInput Bool
 isDownKey k = accumulate f False
   where
     f _ (Input (Keyboard k' Down _)) | k == k' = True
