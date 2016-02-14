@@ -1,0 +1,24 @@
+name:                shine-varying
+version:             0.1.0.0
+synopsis:            TODO
+description:         TODO
+copyright: (c) Francesco Gazzetta
+maintainer: Francesco Gazzetta <francygazz@gmail.com>
+stability: experimental
+homepage: https://github.com/fgaz/shine
+license:             MIT
+license-file:        LICENSE
+author:              Francesco Gazzetta          
+category:            Graphics, Web, FRP
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  exposed-modules:     Graphics.Shine.FRP.Varying
+  -- other-modules:       
+  -- other-extensions:    
+  build-depends:       base >=4.8 && <5.0,
+                       shine,
+                       varying < 0.4
+  hs-source-dirs:      src
+  default-language:    Haskell2010
