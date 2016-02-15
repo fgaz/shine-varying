@@ -7,23 +7,23 @@ import Control.Varying.Core
 import Web.KeyCode
 
 main :: IO ()
-main = playVaryingIO 30 (800,600) ( expandingRectangle
-                                 <> (Colored (Color 255 0 0 1) <$> arrowsCircle)
-                                 <> (Colored (Color 255 0 0 1) <$> trail redTransparency 20 arrowsCircle)
-                                 <> (Colored (Color 0 200 100 1) <$> trail lightGreenTransparency 5 mouseCircle) )
+main = playVarying 30 (800,600) ( expandingRectangle
+                               <> (Colored (Color 255 0 0 1) <$> arrowsCircle)
+                               <> (Colored (Color 255 0 0 1) <$> trail redTransparency 20 arrowsCircle)
+                               <> (Colored (Color 0 200 100 1) <$> trail lightGreenTransparency 5 mouseCircle) )
 
-time :: VarT IO ShineInput Float
+time :: Var ShineInput Float
 time = accumulate
            (\t (btnDown,td) -> if btnDown then 0 else t+td) --reset if clicked
            0
        . ((,) <$> isDownButton BtnLeft <*> timeNumeric) --(click,time delta)
 
-expandingRectangle :: VarT IO ShineInput Picture
+expandingRectangle :: Var ShineInput Picture
 expandingRectangle = fmap (\x -> RectF (x*500) (x*100)) time
 
-vX :: VarT IO ShineInput Float
+vX :: Var ShineInput Float
 vX = accumulate addV 0 . ((,) <$> isDownKey ArrowLeft <*> isDownKey ArrowRight)
-vY :: VarT IO ShineInput Float
+vY :: Var ShineInput Float
 vY = accumulate addV 0 . ((,) <$> isDownKey ArrowUp <*> isDownKey ArrowDown)
 
 addV :: Num a => a -> (Bool, Bool) -> a
@@ -31,19 +31,19 @@ addV v (False, True) = v+5
 addV v (True, False) = v-5
 addV v _ = v
 
-posX :: VarT IO ShineInput Float
+posX :: Var ShineInput Float
 posX = accumulate (+) 400 . (vX * timeNumeric)
-posY :: VarT IO ShineInput Float
+posY :: Var ShineInput Float
 posY = accumulate (+) 300 . (vY * timeNumeric)
 
-arrowsCircle :: VarT IO ShineInput Picture
+arrowsCircle :: Var ShineInput Picture
 arrowsCircle = arrowsCircle' <$> posX <*> posY
   where arrowsCircle' x y = Translate x y $ CircleF 10
 
-mouseCircle :: VarT IO ShineInput Picture
+mouseCircle :: Var ShineInput Picture
 mouseCircle = translateMouse <*> pure (CircleF 20)
 
-translateMouse :: VarT IO ShineInput (Picture -> Picture)
+translateMouse :: Var ShineInput (Picture -> Picture)
 translateMouse = uncurry Translate <$> (bimap fromIntegral <$> mouseMove)
   where bimap f (a, b) = (f a, f b)
 
