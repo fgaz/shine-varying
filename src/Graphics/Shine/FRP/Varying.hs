@@ -6,7 +6,9 @@ module Graphics.Shine.FRP.Varying (
   timeEvent,
   isDownButton,
   isDownKey,
-  mouseMove
+  mouseMove,
+  mouseButtonsDown,
+  keysDown
 ) where
 
 import Graphics.Shine.Input
@@ -16,6 +18,7 @@ import Control.Varying.Core
 import Control.Varying.Event
 import Web.KeyCode
 import Data.Functor.Identity
+import Data.List (delete)
 
 
 data ShineInput = Input Input | Time Float
@@ -61,7 +64,12 @@ isDownButton b = accumulate f False
     f _ (Input (MouseBtn b' Up _)) | b == b' = False
     f s _ = s
 
---mouseButtonsDown :: Var IO ShineInput [MouseButton]
+mouseButtonsDown :: Monad m => VarT m ShineInput [MouseBtn]
+mouseButtonsDown = accumulate f []
+  where
+    f bs (Input (MouseBtn b Down _)) = if b `elem` bs then bs else b:bs
+    f bs (Input (MouseBtn b Up _)) = delete b bs
+    f bs _ = bs
 
 mouseMove :: Monad m => VarT m ShineInput (Int,Int)
 mouseMove = accumulate f (0,0)
@@ -77,4 +85,9 @@ isDownKey k = accumulate f False
     f _ (Input (Keyboard k' Up _)) | k == k' = False
     f s _ = s
 
---keysDown :: Var IO ShineInput [Key]
+keysDown :: Monad m => VarT m ShineInput [Key]
+keysDown = accumulate f []
+  where
+    f ks (Input (Keyboard k Down _)) = if k `elem` ks then ks else k:ks
+    f ks (Input (Keyboard k Up _)) = delete k ks
+    f ks _ = ks

@@ -8,6 +8,7 @@ import Web.KeyCode
 
 main :: IO ()
 main = playVarying 30 (800,600) ( expandingRectangle
+                               <> (Colored (Color 255 0 255 1) <$> Translate 200 200 <$> keys)
                                <> (Colored (Color 255 0 0 1) <$> arrowsCircle)
                                <> (Colored (Color 255 0 0 1) <$> trail redTransparency 20 arrowsCircle)
                                <> (Colored (Color 0 200 100 1) <$> trail lightGreenTransparency 5 mouseCircle) )
@@ -46,6 +47,9 @@ mouseCircle = translateMouse <*> pure (CircleF 20)
 translateMouse :: Var ShineInput (Picture -> Picture)
 translateMouse = uncurry Translate <$> (bimap fromIntegral <$> mouseMove)
   where bimap f (a, b) = (f a, f b)
+
+keys :: Var ShineInput Picture
+keys = (Text "12px sans" CenterAlign 400 . show) <$> keysDown
 
 redTransparency :: Float -> Color
 redTransparency = Color 255 0 0
