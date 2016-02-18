@@ -21,13 +21,20 @@ import Data.Functor.Identity
 import Data.List (delete)
 
 
-data ShineInput = Input Input | Time Float
+-- | Datatype representing all possible inputs coming from shine's main loop
+data ShineInput =
+    -- | An input event (keypress, mousemove...)
+    Input Input
+    -- | An advancement in time
+    | Time Float
 
 
+-- | Feed the input to the Var and draw the result
 playVarying :: Float -> (Int, Int) -> Var ShineInput Picture -> IO ()
 playVarying fps dims v =
     play fps dims (Empty, v) fst (\a b -> runIdentity $ handleInput a b) (\a b -> runIdentity $ step a b)
 
+-- | Feed the input to the VarT IO and draw the result
 playVaryingIO :: Float -> (Int, Int) -> VarT IO ShineInput Picture -> IO ()
 playVaryingIO fps dims v =
     playIO fps dims (Empty, v) (const $ return . fst) (const handleInput) (const step)
@@ -44,12 +51,14 @@ step t (_,v) = runVarT v $ Time t
 
 --MAYBE wrap in Event
 
+-- | Time since beginning. On non-time inputs the value is 0.
 timeNumeric :: Monad m => VarT m ShineInput Float
 timeNumeric = var f
   where
     f (Input _) = 0
     f (Time t) = t
 
+-- | Time since beginning. On non-time inputs the value is NoEvent.
 timeEvent :: Monad m => VarT m ShineInput (Event Float)
 timeEvent = var f
   where
@@ -57,6 +66,7 @@ timeEvent = var f
     f (Time t) = Event t
 
 
+-- | Whether a mouse button is pressed.
 isDownButton :: Monad m => MouseBtn -> VarT m ShineInput Bool
 isDownButton b = accumulate f False
   where
@@ -64,6 +74,7 @@ isDownButton b = accumulate f False
     f _ (Input (MouseBtn b' Up _)) | b == b' = False
     f s _ = s
 
+-- | A list of mouse buttons that are currently being pressed.
 mouseButtonsDown :: Monad m => VarT m ShineInput [MouseBtn]
 mouseButtonsDown = accumulate f []
   where
@@ -71,6 +82,8 @@ mouseButtonsDown = accumulate f []
     f bs (Input (MouseBtn b Up _)) = delete b bs
     f bs _ = bs
 
+-- | The pointer's position, relative to the canvas.
+-- The top-left corner is the origin.
 mouseMove :: Monad m => VarT m ShineInput (Int,Int)
 mouseMove = accumulate f (0,0)
   where
@@ -78,6 +91,7 @@ mouseMove = accumulate f (0,0)
     f s _ = s
 
 
+-- | Whether a key is pressed.
 isDownKey :: Monad m => Key -> VarT m ShineInput Bool
 isDownKey k = accumulate f False
   where
@@ -85,6 +99,7 @@ isDownKey k = accumulate f False
     f _ (Input (Keyboard k' Up _)) | k == k' = False
     f s _ = s
 
+-- | A list of keys that are currently being pressed.
 keysDown :: Monad m => VarT m ShineInput [Key]
 keysDown = accumulate f []
   where
