@@ -1,17 +1,25 @@
 import Prelude hiding ((.))
 import Control.Category ((.))
+import Graphics.Shine
 import Graphics.Shine.FRP.Varying
 import Graphics.Shine.Input
 import Graphics.Shine.Picture
 import Control.Varying.Core
 import Web.KeyCode
+import GHCJS.DOM (webViewGetDomDocument, runWebGUI)
 
 main :: IO ()
-main = playVarying 30 (800,600) ( expandingRectangle
-                               <> (Colored (Color 255 0 255 1) <$> Translate 200 200 <$> keys)
-                               <> (Colored (Color 255 0 0 1) <$> arrowsCircle)
-                               <> (Colored (Color 255 0 0 1) <$> trail redTransparency 20 arrowsCircle)
-                               <> (Colored (Color 0 200 100 1) <$> trail lightGreenTransparency 5 mouseCircle) )
+main = runWebGUI $ \ webView -> do
+    ctx <- fixedSizeCanvas webView 800 600
+    Just doc <- webViewGetDomDocument webView
+    playVarying ctx doc 30 pictureVar
+
+pictureVar :: Var ShineInput Picture
+pictureVar = expandingRectangle
+         <> (Colored (Color 255 0 255 1) <$> Translate 200 200 <$> keys)
+         <> (Colored (Color 255 0 0 1) <$> arrowsCircle)
+         <> (Colored (Color 255 0 0 1) <$> trail redTransparency 20 arrowsCircle)
+         <> (Colored (Color 0 200 100 1) <$> trail lightGreenTransparency 5 mouseCircle)
 
 time :: Var ShineInput Float
 time = accumulate

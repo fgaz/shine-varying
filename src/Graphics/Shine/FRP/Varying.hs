@@ -19,6 +19,9 @@ import Control.Varying.Event
 import Web.KeyCode
 import Data.Functor.Identity
 import Data.List (delete)
+import GHCJS.DOM.CanvasRenderingContext2D (CanvasRenderingContext2D)
+import GHCJS.DOM.Types (IsDocument)
+import GHCJS.DOM.EventTarget (IsEventTarget)
 
 
 -- | Datatype representing all possible inputs coming from shine's main loop
@@ -30,14 +33,14 @@ data ShineInput =
 
 
 -- | Feed the input to the Var and draw the result
-playVarying :: Float -> (Int, Int) -> Var ShineInput Picture -> IO ()
-playVarying fps dims v =
-    play fps dims (Empty, v) fst (\a b -> runIdentity $ handleInput a b) (\a b -> runIdentity $ step a b)
+playVarying :: (IsEventTarget eventElement, IsDocument eventElement) => CanvasRenderingContext2D -> eventElement -> Float -> Var ShineInput Picture -> IO ()
+playVarying ctx doc fps v =
+    play ctx doc fps (Empty, v) fst (\a b -> runIdentity $ handleInput a b) (\a b -> runIdentity $ step a b)
 
 -- | Feed the input to the VarT IO and draw the result
-playVaryingIO :: Float -> (Int, Int) -> VarT IO ShineInput Picture -> IO ()
-playVaryingIO fps dims v =
-    playIO fps dims (Empty, v) (const $ return . fst) (const handleInput) (const step)
+playVaryingIO :: (IsEventTarget eventElement, IsDocument eventElement) => CanvasRenderingContext2D -> eventElement -> Float -> VarT IO ShineInput Picture -> IO ()
+playVaryingIO ctx doc fps v =
+    playIO ctx doc fps (Empty, v) (return . fst) handleInput step
 
 handleInput :: Monad m => Input -> (Picture, VarT m ShineInput Picture) -> m (Picture, VarT m ShineInput Picture)
 handleInput i (_,v) = do
