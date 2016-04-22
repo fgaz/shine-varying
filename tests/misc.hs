@@ -1,7 +1,7 @@
 import Prelude hiding ((.))
 import Control.Category ((.))
 import Graphics.Shine
-import Graphics.Shine.FRP.Varying
+import Graphics.Shine.FRP.Varying hiding (time)
 import Graphics.Shine.Input
 import Graphics.Shine.Picture
 import Control.Varying.Core
@@ -25,7 +25,7 @@ time :: Var ShineInput Float
 time = accumulate
            (\t (btnDown,td) -> if btnDown then 0 else t+td) --reset if clicked
            0
-       . ((,) <$> isDownButton BtnLeft <*> timeNumeric) --(click,time delta)
+       . ((,) <$> isDownButton BtnLeft <*> timeDeltaNumeric) --(click,time delta)
 
 expandingRectangle :: Var ShineInput Picture
 expandingRectangle = fmap (\x -> RectF (x*500) (x*100)) time
@@ -41,9 +41,9 @@ addV v (True, False) = v-5
 addV v _ = v
 
 posX :: Var ShineInput Float
-posX = accumulate (+) 400 . (vX * timeNumeric)
+posX = accumulate (+) 400 . (vX * timeDeltaNumeric)
 posY :: Var ShineInput Float
-posY = accumulate (+) 300 . (vY * timeNumeric)
+posY = accumulate (+) 300 . (vY * timeDeltaNumeric)
 
 arrowsCircle :: Var ShineInput Picture
 arrowsCircle = arrowsCircle' <$> posX <*> posY
@@ -53,7 +53,7 @@ mouseCircle :: Var ShineInput Picture
 mouseCircle = translateMouse <*> pure (CircleF 20)
 
 translateMouse :: Var ShineInput (Picture -> Picture)
-translateMouse = uncurry Translate <$> (bimap fromIntegral <$> mouseMove)
+translateMouse = uncurry Translate <$> (bimap fromIntegral <$> mousePosition)
   where bimap f (a, b) = (f a, f b)
 
 keys :: Var ShineInput Picture

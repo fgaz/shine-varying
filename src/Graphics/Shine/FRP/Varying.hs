@@ -1,12 +1,51 @@
+{-|
+Module      : Graphics.Shine.FRP.Varying
+Description : FRP interface for shine
+Copyright   : (c) Francesco Gazzetta, 2016
+License     : MIT
+Maintainer  : francygazz@gmail.com
+Stability   : experimental
+
+This package lets you interact with the screen Elm-style.
+This is especially useful for small games or visualizations.
+You can get something on the screen quickly using the Vars provided below.
+
+Try to run this:
+
+> import Graphics.Shine.FRP.Varying
+> import Graphics.Shine
+> import Graphics.Shine.Picture
+> import Graphics.Shine.Image
+> import GHCJS.DOM (webViewGetDomDocument, runWebGUI)
+>
+> resizeImage img (x',y') = Translate (x/2) (y/2) -- Pictures are centered on (0,0), so we need to move it
+>                         $ Image (Stretched x y) img -- Scale de picture to the given position
+>   where
+>     x = fromIntegral x' -- mousePosition is Integral
+>     y = fromIntegral y'
+>
+> main :: IO ()
+> main = runWebGUI $ \ webView -> do
+>     ctx <- fixedSizeCanvas webView 1024 768
+>     Just doc <- webViewGetDomDocument webView
+>     narwhal <- makeImage "https://wiki.haskell.org/wikiupload/8/85/NarleyYeeaaahh.jpg"
+>     let resizedNarwhal = resizeImage narwhal <$> mousePosition
+>     playVarying ctx doc 30 resizedNarwhal
+
+
+-}
 module Graphics.Shine.FRP.Varying (
   ShineInput(..),
+  -- * Running the Var
   playVarying,
   playVaryingIO,
-  timeNumeric,
-  timeEvent,
+  -- * Useful Vars
+  timeDeltaNumeric,
+  timeDeltaEvent,
+  time,
   isDownButton,
   isDownKey,
-  mouseMove,
+  mousePosition,
   mouseButtonsDown,
   keysDown
 ) where
@@ -16,6 +55,8 @@ import Graphics.Shine.Picture
 import Graphics.Shine
 import Control.Varying.Core
 import Control.Varying.Event
+import Control.Category ((.))
+import Prelude hiding ((.))
 import Web.KeyCode
 import Data.Functor.Identity
 import Data.List (delete)
@@ -33,40 +74,51 @@ data ShineInput =
 
 
 -- | Feed the input to the Var and draw the result
-playVarying :: (IsEventTarget eventElement, IsDocument eventElement) => CanvasRenderingContext2D -> eventElement -> Float -> Var ShineInput Picture -> IO ()
+playVarying :: (IsEventTarget eventElement, IsDocument eventElement)
+            => CanvasRenderingContext2D -- ^ The context to draw on
+            -> eventElement -- ^ the element used to catch events
+            -> Float -- ^ FPS
+            -> Var ShineInput Picture -- ^ A 'Var' that maps time and input events to a 'Picture'
+            -> IO ()
 playVarying ctx doc fps v =
     play ctx doc fps (Empty, v) fst (\a b -> runIdentity $ handleInput a b) (\a b -> runIdentity $ step a b)
 
 -- | Feed the input to the VarT IO and draw the result
-playVaryingIO :: (IsEventTarget eventElement, IsDocument eventElement) => CanvasRenderingContext2D -> eventElement -> Float -> VarT IO ShineInput Picture -> IO ()
+playVaryingIO :: (IsEventTarget eventElement, IsDocument eventElement)
+              => CanvasRenderingContext2D -- ^ The context to draw on
+              -> eventElement -- ^ the element used to catch events
+              -> Float -- ^ FPS
+              -> VarT IO ShineInput Picture -- ^ An effectful 'VarT' that maps time and input events to a 'Picture'
+              -> IO ()
 playVaryingIO ctx doc fps v =
     playIO ctx doc fps (Empty, v) (return . fst) handleInput step
 
 handleInput :: Monad m => Input -> (Picture, VarT m ShineInput Picture) -> m (Picture, VarT m ShineInput Picture)
 handleInput i (_,v) = do
-  v' <- execVar v $ Input i
+  v' <- snd <$> runVarT v (Input i)
   return (Empty, v')
 
 step :: Monad m => Float -> (Picture, VarT m ShineInput Picture) -> m (Picture, VarT m ShineInput Picture)
 step t (_,v) = runVarT v $ Time t
 
--- ## Useful Vars
 
---MAYBE wrap in Event
-
--- | Time since beginning. On non-time inputs the value is 0.
-timeNumeric :: Monad m => VarT m ShineInput Float
-timeNumeric = var f
+-- | Time delta. On non-time inputs the value is 0.
+timeDeltaNumeric :: Monad m => VarT m ShineInput Float
+timeDeltaNumeric = var f
   where
     f (Input _) = 0
     f (Time t) = t
 
--- | Time since beginning. On non-time inputs the value is NoEvent.
-timeEvent :: Monad m => VarT m ShineInput (Event Float)
-timeEvent = var f
+-- | Time delta. On non-time inputs the value is NoEvent.
+timeDeltaEvent :: Monad m => VarT m ShineInput (Event Float)
+timeDeltaEvent = var f
   where
     f (Input _) = NoEvent
     f (Time t) = Event t
+
+-- | Time since beginning.
+time :: Monad m => VarT m ShineInput Float
+time = accumulate (+) 0 . timeDeltaNumeric
 
 
 -- | Whether a mouse button is pressed.
@@ -87,8 +139,8 @@ mouseButtonsDown = accumulate f []
 
 -- | The pointer's position, relative to the canvas.
 -- The top-left corner is the origin.
-mouseMove :: Monad m => VarT m ShineInput (Int,Int)
-mouseMove = accumulate f (0,0)
+mousePosition :: Monad m => VarT m ShineInput (Int,Int)
+mousePosition = accumulate f (0,0)
   where
     f _ (Input (MouseMove coords)) = coords
     f s _ = s
